@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Live Order Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: #f4f6f9; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .order {
+            background: white; padding: 22px; margin: 15px 0; border-radius: 14px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-left: 7px solid #3498db;
+            transition: all 0.3s ease;
+        }
+        .notification {
+            position: fixed; top: 20px; right: 20px; padding: 18px 30px;
+            background: #27ae60; color: white; border-radius: 12px; font-weight: bold;
+            font-size: 17px; box-shadow: 0 8px 25px rgba(0,0,0,0.3); z-index: 9999; display: none;
+        }
+        button {
+            padding: 12px 24px; border: none; border-radius: 10px; color: white;
+            font-weight: bold; cursor: pointer; margin-right: 12px; margin-top: 12px;
+            transition: 0.2s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn-out { background: #e67e22; }
+        .btn-delivered { background: #27ae60; }
+        .completed { color: #27ae60; font-weight: bold; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<h1>Admin Live Order Dashboard</h1>
+<div id="notification" class="notification">Status Updated!</div>
+<div id="orders"></div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        alert('Please login as ADMIN first!');
+        window.location.href = '/auth/login.html';
+    }
+
+    const socket = new SockJS('http://localhost:8080/ws');
+    const stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect(
+        { 'Authorization': 'Bearer ' + token },
+        () => {
+            console.log('Admin connected');
+            stompClient.subscribe('/topic/admin/orders', msg => {
+                const event = JSON.parse(msg.body);
+                addOrUpdateOrder(event);  // ← LIVE UPDATE FROM KAFKA
+            });
+        }
+    );
+
+    // Load past orders
+    fetch('http://localhost:8080/api/admin/orders', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(r => r.json())
+    .then(orders => {
+        orders.reverse().forEach(order => {
+            addOrUpdateOrder({
+                orderId: order.id,
+                customerUsername: order.customerUsername,
+                productName: order.productName,
+                price: order.price,
+                status: order.status,
+                message: "Previous order"
+            });
+        });
+    });
+
+    // THIS IS THE KEY: UPDATE EXISTING CARD INSTANTLY
+    function addOrUpdateOrder(event) {
+        let card = document.getElementById('order-' + event.orderId);
+        if (!card) {
+            card = document.createElement('div');
+            card.id = 'order-' + event.orderId;
+            card.className = 'order';
+            document.getElementById('orders').insertBefore(card, document.getElementById('orders').firstChild);
+        }
+
+        const status = event.status || 'PENDING';
+        const isPending = status === 'PENDING';
+        const isOut = status === 'OUT_FOR_DELIVERY';
+        const isDelivered = status === 'DELIVERED';
+
+        card.innerHTML = `
+            <strong style="font-size:20px">Order #${event.orderId}</strong>
+            by <i>${event.customerUsername}</i><br><br>
+            <b>${event.productName}</b> | ₹${event.price || 'N/A'}<br><br>
+            Status: <span style="font-size:22px; font-weight:bold; color:${isOut?'#f39c12':isDelivered?'#27ae60':'#e67e22'}">
+                ${status.replace(/_/g, ' ')}
+            </span><br><br>
+            <i>${event.message}</i>
+            <div style="margin-top:18px">
+                ${isPending ? `<button class="btn-out" onclick="updateStatus(${event.orderId}, 'out')">Out for Delivery</button>` : ''}
+                ${isOut ? `<button class="btn-delivered" onclick="updateStatus(${event.orderId}, 'delivered')">Mark Delivered</button>` : ''}
+                ${isDelivered ? '<span class="completed">Completed</span>' : ''}
+            </div>
+            <hr style="margin-top:25px; border:1px dashed #ddd">
+        `;
+    }
+
+    // Button click → instant optimistic UI + real update
+    function updateStatus(orderId, action) {
+        const url = action === 'out'
+            ? `http://localhost:8080/api/admin/order/${orderId}/out-for-delivery`
+            : `http://localhost:8080/api/admin/order/${orderId}/delivered`;
+
+        // INSTANT UI UPDATE (optimistic)
+        const fakeEvent = {
+            orderId,
+            status: action === 'out' ? 'OUT_FOR_DELIVERY' : 'DELIVERED',
+            message: action === 'out' ? "Out for Delivery!" : "Delivered!"
+        };
+        addOrUpdateOrder(fakeEvent);
+        showNotification();
+
+        // Real backend call
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(() => alert('Update failed'));
+    }
+
+    function showNotification() {
+        const n = document.getElementById('notification');
+        n.style.display = 'block';
+        setTimeout(() => n.style.display = 'none', 3000);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {font-family: Arial; margin: 20px; background: #f8f9fa;}
+        h1 {color: #2c3e50;}
+        .product {background: white; padding: 20px; margin: 15px 0; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);}
+        button {padding: 12px 25px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;}
+        button:hover {background: #2980b9;}
+        .bell {position: fixed; top: 20px; right: 20px; font-size: 50px; cursor: pointer;}
+        .notification {position: fixed; top: 80px; right: 20px; padding: 15px 25px; background: #2ecc71; color: white; border-radius: 10px; display: none; z-index: 1000; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.3);}
+    </style>
+</head>
+<body>
+<h1>Welcome, <span id="username"></span>!</h1>
+<div class="bell">New</div>
+<div id="notif" class="notification">Your order is Out for Delivery!</div>
+
+<div class="product">
+    <h2>Pizza Margherita</h2>
+    <p>₹850</p>
+    <button onclick="placeOrder('Pizza Margherita', 850)">Order Now</button>
+</div>
+<div class="product">
+    <h2>Burger Deluxe</h2>
+    <p>₹599</p>
+    <button onclick="placeOrder('Burger Deluxe', 599)">Order Now</button>
+</div>
+
+<script>
+    const username = localStorage.getItem('username');
+    document.getElementById('username').textContent = username;
+
+    // WebSocket connection for private notifications
+    const socket = new SockJS('http://localhost:8080/ws');
+    const stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect({}, function() {
+        console.log('Customer connected');
+        stompClient.subscribe('/topic/notifications/' + username, function(msg) {
+            const event = JSON.parse(msg.body);
+            showNotification(event.message || event.status);
+            document.querySelector('.bell').textContent = 'New';
+            setTimeout(() => document.querySelector('.bell').textContent = 'New', 3000);
+        });
+    });
+
+    async function placeOrder(productName, price) {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch('http://localhost:8080/api/user/order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ productName, price })
+        });
+
+        if (response.ok) {
+            alert('Order placed successfully!');
+        } else {
+            alert('Order failed – maybe login again');
+        }
+    }
+
+    function showNotification(message) {
+        const notif = document.getElementById('notif');
+        notif.textContent = message;
+        notif.style.display = 'block';
+        setTimeout(() => notif.style.display = 'none', 5000);
+    }
+</script>
+</body>
+</html>
