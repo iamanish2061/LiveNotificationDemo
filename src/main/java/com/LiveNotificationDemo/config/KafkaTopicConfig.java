@@ -17,7 +17,7 @@ public class KafkaTopicConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    // This helps Spring create topics automatically
+    // helps spring to create topics automatically
     @Bean
     public KafkaAdmin kafkaAdmin() {
         Map<String, Object> configs = new HashMap<>();
