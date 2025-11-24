@@ -47,7 +47,6 @@ public class OrderService {
         return orderRepo.findAll();
     }
 
-    // Add these two methods inside OrderService class
     public Order markOutForDelivery(Long orderId) {
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
