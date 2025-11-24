@@ -18,4 +18,5 @@ public class NotificationEventConsumer {
     public void consume(OrderEvent event) {
         notificationService.sendPrivateNotification(event.customerUsername(), event);
     }
+
 }
