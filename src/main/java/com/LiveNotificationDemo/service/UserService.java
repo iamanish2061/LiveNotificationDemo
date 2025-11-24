@@ -42,12 +42,12 @@ public class UserService {
         // authenticate is the unimplemented method of AuthenticationManager interface whose one of the implementations is done is ProviderManager class
         // provider manager.authenticate() is called -> then it iterates through the available provider
         // i am using DAO so its dynamically added to the list of providerManager
-//          now authentication is done by dao class's object
-//        in that method :the flow is
-//        1. load the user by username from database
-//        (method present in UserDetailsService) and i have implemented that on CustomUserDetailsService
-//        2. verifying password by encoding entered one to db's password
-//        3. returning an authenticated token with authorities
+        //          now authentication is done by dao class's object
+        //        in that method :the flow is
+        //        1. load the user by username from database
+        //        (method present in UserDetailsService) and i have implemented that on CustomUserDetailsService
+        //        2. verifying password by encoding entered one to db's password
+        //        3. returning an authenticated token with authorities
 
 
         if (!authentication.isAuthenticated()) throw new RuntimeException("Invalid credentials");
