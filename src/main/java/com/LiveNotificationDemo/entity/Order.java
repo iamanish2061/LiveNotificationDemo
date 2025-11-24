@@ -18,7 +18,7 @@ public class Order {
 
     private String productName;
     private Double price;
-    private String customerUsername;  // who placed the order
+    private String customerUsername;  //user's username who places an order
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PENDING;
