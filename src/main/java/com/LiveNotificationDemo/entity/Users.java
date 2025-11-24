@@ -30,7 +30,7 @@ public class Users {
 
     private LocalDateTime refreshTokenExpiry;
 
-    // to send notifications only to logged-in users
+    // for sending notifications only to logged-in users
     private boolean online = false;
 
     public enum Role {
