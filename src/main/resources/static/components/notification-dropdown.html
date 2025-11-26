@@ -1,0 +1,81 @@
+<div id="notification-bell" style="position:fixed;top:20px;right:20px;z-index:9999;cursor:pointer;">
+    <span style="font-size:40px;">New</span>
+    <span id="unread-badge"
+          style="position:absolute;top:-10px;right:-10px;background:#e74c3c;color:white;
+                 border-radius:50%;width:24px;height:24px;font-size:14px;display:none;
+                 text-align:center;line-height:24px;font-weight:bold;">
+        0
+    </span>
+</div>
+
+<div id="notification-panel"
+     style="position:fixed;top:70px;right:20px;width:380px;max-height:70vh;
+            background:white;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.2);
+            overflow-y:auto;display:none;z-index:9998;">
+    <div style="padding:16px;background:#3498db;color:white;border-radius:12px 12px 0 0;">
+        <h3 style="margin:0;">Notifications</h3>
+    </div>
+    <div id="notification-list" style="padding:10px;">
+        <p style="text-align:center;color:#95a5a6;padding:20px;">No notifications yet</p>
+    </div>
+    <div style="padding:10px;text-align:center;border-top:1px solid #eee;">
+        <small style="color:#95a5a6">You're all caught up!</small>
+    </div>
+</div>
+
+<script>
+    const username = localStorage.getItem('username') || 'guest';
+    let panelOpen = false;
+
+    // Toggle panel
+    document.getElementById('notification-bell').onclick = () => {
+        const panel = document.getElementById('notification-panel');
+        panel.style.display = panelOpen ? 'none' : 'block';
+        panelOpen = !panelOpen;
+        if (panelOpen) loadNotifications();
+    };
+
+    // Load notifications + badge
+    function loadNotifications() {
+        fetch(`http://localhost:8080/api/notifications/unread?username=${username}`, {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('accessToken') }
+        })
+        .then(r => r.json())
+        .then(notifs => {
+            const badge = document.getElementById('unread-badge');
+            badge.textContent = notifs.length;
+            badge.style.display = notifs.length > 0 ? 'block' : 'none';
+        });
+
+        fetch(`http://localhost:8080/api/notifications/all?username=${username}`, {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('accessToken') }
+        })
+        .then(r => r.json())
+        .then(list => {
+            const container = document.getElementById('notification-list');
+            if (list.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#95a5a6;padding:40px;">No notifications</p>';
+                return;
+            }
+            container.innerHTML = list.map(n => `
+                <div style="padding:12px;border-bottom:1px solid #eee;background:${n.isRead?'white':'#f8f9fa'};">
+                    <div style="font-weight:${n.isRead?'normal':'bold'}">${n.title}</div>
+                    <div style="font-size:14px;color:#2c3e50;margin:4px 0">${n.message}</div>
+                    <small style="color:#95a5a6">${new Date(n.createdAt).toLocaleString()}</small>
+                    ${!n.isRead ? `<button onclick="markAsRead(${n.id})" style="float:right;background:#3498db;color:white;border:none;padding:4px 8px;border-radius:4px;font-size:12px;">Mark Read</button>` : ''}
+                </div>
+            `).join('');
+        });
+    }
+
+    function markAsRead(id) {
+        fetch(`http://localhost:8080/api/notifications/read/${id}`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('accessToken') }
+        }).then(() => loadNotifications());
+    }
+
+    // Auto refresh every 10 seconds
+    setInterval(loadNotifications, 10000);
+    loadNotifications(); // initial load
+</script>
