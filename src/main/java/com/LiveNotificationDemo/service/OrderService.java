@@ -63,6 +63,7 @@ public class OrderService {
                 "Your order is Out for Delivery!"
         );
 
+        kafkaProducer.sendOrderEvent(event);
         kafkaProducer.sendNotificationEvent(event);
         return order;
     }
@@ -82,6 +83,8 @@ public class OrderService {
                 order.getStatus(),
                 "Your order has been Delivered!"
         );
+
+        kafkaProducer.sendOrderEvent(event);
         kafkaProducer.sendNotificationEvent(event);
         return order;
     }
