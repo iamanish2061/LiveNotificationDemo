@@ -36,17 +36,20 @@ public class SecurityConfig {
                             "/auth/**",
                             "/user/**",
                             "/admin/**",
+                            "/components/**",
                             "/ws/**",
                             "/css/**", "/js/**", "/images/**").permitAll()
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                     .requestMatchers("/api/user/**").hasAuthority("ROLE_USER")
                     .anyRequest().authenticated())
-                        .formLogin(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .sessionManagement(session->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .headers(headers->
+                        headers.frameOptions(frame->frame.sameOrigin()))
                 .build();
     }
 
