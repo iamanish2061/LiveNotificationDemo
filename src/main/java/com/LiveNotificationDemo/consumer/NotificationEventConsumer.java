@@ -16,7 +16,7 @@ public class NotificationEventConsumer {
 
     @KafkaListener(topics = "notification-events", groupId = "notification-group")
     public void consume(OrderEvent event) {
-        notificationService.sendPrivateNotification(event.customerUsername(), event);
+        notificationService.saveAndSendNotification(event.customerUsername(), event);
     }
 
 }

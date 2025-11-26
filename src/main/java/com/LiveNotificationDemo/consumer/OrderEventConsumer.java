@@ -20,5 +20,6 @@ public class OrderEventConsumer {
 
         // Instantly push to all connected admins
         notificationService.sendToAllAdmins(event);
+        notificationService.saveAndSendToAllAdmins(event);
     }
 }
